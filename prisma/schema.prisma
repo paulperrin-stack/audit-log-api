@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  AUDITOR
+  VIEWER
+}
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  passwordHash  String
+  role          Role          @default(VIEWER)
+  createdAt     DateTime      @default(now())
+  isActive      Boolean       @default(true)    // soft disable, never delete
+
+  auditLog      AuditLog[]
+}
+
+model AuditLog {
+  id            String        @id @default(uuid())
+
+  // WHO
+  actorId       String
+  actor         User          @relation(fields: [actorId], references: [id])
+  actorEmail    String        // denormalized - if user is deleted/changed, log stays accurate
+  actorRole     Role          // snapshot the role at time of action
+
+  // WHAT
+  action        String        // e.g. "user.created", "document.deleted", "role.changed"
+  resourceType  String        // e.g. "User", "Document", "AuditLog"
+  resourceId    String?       // nullable - some actions have no target resource
+
+  // WHAT CHANGED
+  previousState Json?         // nullable - null for creates
+  newState      Json?         // nullable - null for deletes
+
+  // WHEN + WHERE
+  timestamp     DateTime      @default(now())
+  ipAddress     String?
+  userAgent     String?
+
+  // OUTCOME
+  statusCode    Int           // HTTP status of the triggering request
+  success       Boolean
+
+  // INTEGRITY
+  checksum      String        // SHA-256 of the other fields - tamper detection
+
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@index([timestamp])
+  @@index([action])
+}
