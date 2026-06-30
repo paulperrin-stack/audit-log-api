@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "node --watch dist/index.js",
+    "dev": "node --watch --env-file=.env dist/index.js",
     "build": "tsc",
     "test": "jest",
     "typecheck": "tsc --noEmit"
