@@ -6,6 +6,8 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) throw new Error('JWT_SECRET is not defined');
 
 const SALT_ROUNDS = 10;
+// Must match SALT_ROUNDS. If SALT_ROUNDS changes, regenerate this hash.
+const DUMMY_HASH = '$2b$10$X4kv7j5ZcG39WgogSl16aufxkiYSypPMEAIFq0PxIzZJPnkMxHnHi';
 
 export class AuthService {
     async registerUser(email: string, password: string) {
@@ -40,6 +42,7 @@ export class AuthService {
         });
 
         if (!user) {
+            await bcrypt.compare(password, DUMMY_HASH);
             throw new Error('Invalid email or password');
         }
 
@@ -50,7 +53,7 @@ export class AuthService {
         }
 
         const token = jwt.sign(
-            { userId: user.id, email: user.email },
+            { userId: user.id, email: user.email, role: user.role },
             JWT_SECRET,
             { expiresIn: '1h' }
         );
