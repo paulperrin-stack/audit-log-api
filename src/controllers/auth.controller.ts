@@ -20,7 +20,7 @@ export class AuthController {
         } catch (error) {
             if (error instanceof Error) {
                 // Duplicate email — the resource already exists
-                if (error.message.includes('already exists')) {
+                if (error.message.includes('already registered')) {
                     res.status(409).json({
                         success: false,
                         message: error.message,
