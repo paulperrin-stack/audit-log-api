@@ -4,6 +4,7 @@ import authRouter from './routes/auth.routes.js';
 import { authenticate } from './middleware/auth.middleware.js';
 import { authorize } from './middleware/rbac.middleware.js';
 import { Role } from './types/prisma.js';
+import { AuditLogService } from './services/audit-log.service.js';
 
 const app = express();
 
@@ -12,8 +13,23 @@ app.use(express.json());
 
 app.use('/auth', authRouter);
 
-app.get('/protected', authenticate, authorize(Role.ADMIN), (req, res) => {
-    res.json({ message: 'you are an admin', user: req.user });
+app.post('/test-log', authenticate, async (req, res) => {
+  const auditLogService = new AuditLogService();
+  await auditLogService.createLog({
+    actorId: req.user!.id,
+    actorEmail: req.user!.email,
+    actorRole: req.user!.role,
+    action: 'test.action',
+    resourceType: 'Test',
+    resourceId: '123',
+    previousState: { value: 'old' },
+    newState: { value: 'new' },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    statusCode: 200,
+    success: true,
+  });
+  res.json({ ok: true });
 });
 
 app.get('/health', (req: Request, res: Response) => {
