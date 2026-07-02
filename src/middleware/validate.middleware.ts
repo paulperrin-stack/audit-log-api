@@ -34,3 +34,21 @@ export function validateBody<T>(schema: ZodSchema<{ body: T }>) {
     next();
   };
 }
+
+export function validateQuery<T>(schema: ZodSchema<{ query: T }>) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse({ query: req.query });
+
+    if (!result.success) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid query parameters',
+        errors: formatZodErrors(result.error.issues),
+      });
+      return;
+    }
+
+    res.locals.query = result.data.query;
+    next();
+  };
+}

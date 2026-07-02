@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { Prisma, Role } from '../types/prisma.js';
 import prisma from '../utils/prisma.js';
+import { AuditLog } from '../generated/prisma/client.js';
+import { AuditLogQuery } from '../validators/audit-log.validator.js';
 
 export interface CreateLogData {
     actorId?: string;
@@ -61,5 +63,64 @@ export class AuditLogService {
                 checksum,
             },
         });
+    }
+
+    async getLogs(query: AuditLogQuery) {
+        const { action, actorId, resourceType, success, page, limit } = query;
+
+        const where = {
+            ...(action          !== undefined && { action }),
+            ...(actorId         !== undefined && { actorId }),
+            ...(resourceType    !== undefined && { resourceType }),
+            ...(success         !== undefined && { success }),
+        };
+
+        const [logs, total] = await Promise.all([
+            prisma.auditLog.findMany({
+                where,
+                orderBy: { timestamp: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit,
+            }),
+            prisma.auditLog.count({ where }),
+        ]);
+
+        return {
+            data: logs,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
+
+    async getLogById(id: string) {
+        return prisma.auditLog.findUnique({ where: { id } });
+    }
+
+    async getStats() {
+        const [total, byAction, byRole] = await Promise.all([
+            prisma.auditLog.count(),
+
+            prisma.auditLog.groupBy({
+                by: ['action'],
+                _count: { action: true },
+                orderBy: { _count: { action: 'desc' } },
+            }),
+
+            prisma.auditLog.groupBy({
+                by: ['actorRole'],
+                _count: { actorRole: true },
+                orderBy: { _count: { actorRole: 'desc' } },
+            }),
+        ]);
+
+        return {
+            total,
+            byAction: byAction.map((r) => ({ action: r.action, count: r._count.action })),
+            byRole:   byRole.map((r) => ({ role: r.actorRole, count: r._count.actorRole })),
+        };
     }
 }
