@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { Prisma, Role } from '../generated/prisma/client.js';
+import { Prisma, Role } from '../types/prisma.js';
 import prisma from '../utils/prisma.js';
 
 export interface CreateLogData {
-    actorId: string;
+    actorId?: string;
     actorEmail: string;
     actorRole: Role;
     action: string;
@@ -19,7 +19,7 @@ export interface CreateLogData {
 
 function computeChecksum(data: CreateLogData, timestamp: string): string {
     const content = [
-        data.actorId,
+        data.actorId ?? '',
         data.actorEmail,
         data.actorRole,
         data.action,
@@ -41,19 +41,18 @@ export class AuditLogService {
     async createLog(data: CreateLogData) {
         const timestamp = new Date();
         const timestampISO = timestamp.toISOString();
-
         const checksum = computeChecksum(data, timestampISO);
 
         return prisma.auditLog.create({
             data: {
-                actorId: data.actorId,
+                actorId: data.actorId ?? 'anonymous',
                 actorEmail: data.actorEmail,
                 actorRole: data.actorRole,
                 action: data.action,
                 resourceType: data.resourceType,
                 resourceId: data.resourceId,
-                previousState: data.previousState as Prisma.InputJsonValue ?? null,
-                newState: data.newState as Prisma.InputJsonValue ?? null,
+                previousState: data.previousState as Prisma.InputJsonValue | undefined,
+                newState: data.newState as Prisma.InputJsonValue | undefined,
                 ipAddress: data.ipAddress,
                 userAgent: data.userAgent,
                 statusCode: data.statusCode,

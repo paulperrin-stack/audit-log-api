@@ -20,16 +20,13 @@ model User {
   role          Role          @default(VIEWER)
   createdAt     DateTime      @default(now())
   isActive      Boolean       @default(true)    // soft disable, never delete
-
-  auditLog      AuditLog[]
 }
 
 model AuditLog {
   id            String        @id @default(uuid())
 
   // WHO
-  actorId       String
-  actor         User          @relation(fields: [actorId], references: [id])
+  actorId       String?
   actorEmail    String        // denormalized - if user is deleted/changed, log stays accurate
   actorRole     Role          // snapshot the role at time of action
 
